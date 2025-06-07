@@ -1,13 +1,9 @@
 "use client"
 
+import Image from "next/image";
 import { useState } from "react";
 
-interface LandingPageUIProps {
-  termsContent: string;
-  safeguardingContent: string;
-}
-
-export default function LandingPageUI({ termsContent, safeguardingContent }: LandingPageUIProps) {
+export default function LandingPageUI() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [safeguardingAccepted, setSafeguardingAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -51,29 +47,25 @@ export default function LandingPageUI({ termsContent, safeguardingContent }: Lan
             
             {showTerms && (
               <div className="mt-4 pt-4 border-t border-gray-200">
-                <img 
+                <Image 
                   src="/docs/AcceptancePolicy/EmcGuestWifiAcceptableUsePolicy2025_1.jpg" 
                   alt="EMC Guest Wi-Fi Acceptable Use Policy Document Scan" 
                   className="max-w-full h-auto rounded-md shadow-sm mb-6" 
                 />
-                <img 
+                <Image 
                   src="/docs/AcceptancePolicy/EmcGuestWifiAcceptableUsePolicy2025_2.jpg" 
                   alt="EMC Guest Wi-Fi Acceptable Use Policy Document Scan" 
                   className="max-w-full h-auto rounded-md shadow-sm mb-6" 
                 />
-                <img 
+                <Image 
                   src="/docs/AcceptancePolicy/EmcGuestWifiAcceptableUsePolicy2025_3.jpg" 
                   alt="EMC Guest Wi-Fi Acceptable Use Policy Document Scan" 
                   className="max-w-full h-auto rounded-md shadow-sm mb-6" 
                 />
-                <img 
+                <Image 
                   src="/docs/AcceptancePolicy/EmcGuestWifiAcceptableUsePolicy2025_4.jpg" 
                   alt="EMC Guest Wi-Fi Acceptable Use Policy Document Scan" 
                   className="max-w-full h-auto rounded-md shadow-sm mb-6" 
-                />
-                <div
-                  className="prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none"
-                  dangerouslySetInnerHTML={{ __html: termsContent }}
                 />
               </div>
             )}
@@ -108,32 +100,32 @@ export default function LandingPageUI({ termsContent, safeguardingContent }: Lan
             
             {showSafeguarding && (
               <>
-                <img 
+                <Image 
                     src="/docs/SafeguardingPolicy/EmcSafeguardingPolicy2024_1.jpg" 
                     alt="EMC Euxton Safeguarding Policy Document Scan" 
                     className="max-w-full h-auto rounded-md shadow-sm" 
                   />
-                  <img 
+                  <Image 
                     src="/docs/SafeguardingPolicy/EmcSafeguardingPolicy2024_2.jpg" 
                     alt="EMC Euxton Safeguarding Policy Document Scan" 
                     className="max-w-full h-auto rounded-md shadow-sm" 
                   />
-                  <img 
+                  <Image 
                     src="/docs/SafeguardingPolicy/EmcSafeguardingPolicy2024_3.jpg" 
                     alt="EMC Euxton Safeguarding Policy Document Scan" 
                     className="max-w-full h-auto rounded-md shadow-sm" 
                   />
-                  <img 
+                  <Image 
                     src="/docs/SafeguardingPolicy/EmcSafeguardingPolicy2024_4.jpg" 
                     alt="EMC Euxton Safeguarding Policy Document Scan" 
                     className="max-w-full h-auto rounded-md shadow-sm" 
                   />
-                  <img 
+                  <Image 
                     src="/docs/SafeguardingPolicy/EmcSafeguardingPolicy2024_5.jpg" 
                     alt="EMC Euxton Safeguarding Policy Document Scan" 
                     className="max-w-full h-auto rounded-md shadow-sm" 
                   />
-                  <img 
+                  <Image 
                     src="/docs/SafeguardingPolicy/EmcSafeguardingPolicy2024_6.jpg" 
                     alt="EMC Euxton Safeguarding Policy Document Scan" 
                     className="max-w-full h-auto rounded-md shadow-sm" 
