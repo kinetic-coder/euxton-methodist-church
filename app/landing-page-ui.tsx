@@ -8,9 +8,11 @@ interface LandingPageUIProps {
   id?: string;
   url?: string;
   ssis?: string;
+  siteId?: string;
+  clientId?: string;
 }
 
-export default function LandingPageUI({ ap, id, url, ssis }: LandingPageUIProps) {
+export default function LandingPageUI({ ap, id, url, ssis, siteId, clientId }: LandingPageUIProps) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [safeguardingAccepted, setSafeguardingAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -173,7 +175,7 @@ export default function LandingPageUI({ ap, id, url, ssis }: LandingPageUIProps)
         </div>
 
         {/* Collapsible Connection Parameters Section */}
-        {(ap || id || url || ssis) && (
+        {(ap || id || url || ssis || siteId) && (
           <div className="mt-12 pt-8 border-t border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-800">
@@ -193,6 +195,8 @@ export default function LandingPageUI({ ap, id, url, ssis }: LandingPageUIProps)
                   {id && <li><strong>Device MAC:</strong> {id}</li>}
                   {url && <li><strong>Original URL:</strong> {url}</li>}
                   {ssis && <li><strong>SSID:</strong> {ssis}</li>}
+                  {siteId && <li><strong>Site ID:</strong> {siteId}</li>}
+                  {clientId && <li><strong>Client ID:</strong> {clientId}</li>}
                 </ul>
               </div>
             )}

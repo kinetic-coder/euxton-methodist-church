@@ -1,3 +1,5 @@
+# Euxton Methodist Church Wi-Fi Acceptable Use Policy and Safeguarding Policy
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -34,3 +36,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+# useful reference material
+This project was done using the information provided by Ubiquiti's documentation on their [External Hotspot API for Authorization Clients](https://help.ui.com/hc/en-us/articles/31228198640023-External-Hotspot-API-for-Authorization-Clients).
+
+The other documentation that proved useful can be found at official API documentation at https://developer.ui.com/site-manager-api/listsites/
