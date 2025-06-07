@@ -1,6 +1,16 @@
 import LandingPageUI from './landing-page-ui';
 
-export default async function HomePage({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
+// Define the props type for this page, reflecting Next.js 15 changes
+interface HomePageProps {
+  params: Promise<Record<string, string>>; // For app/page.tsx, Next.js provides an empty params object {}
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>; // searchParams can be optional
+}
+
+export default async function HomePage({ params: paramsPromise, searchParams: searchParamsPromise }: HomePageProps) {
+  // Await the promises to get the actual values
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _params = await paramsPromise;
+  const searchParams = searchParamsPromise ? await searchParamsPromise : {}; // Handle optional searchParams
   const apiKey = process.env.SITE_MANAGER_API_KEY;
   const apiUrlBase = process.env.SITE_MANAGER_URL;
   let siteId: string | undefined = undefined;
