@@ -41,3 +41,4 @@ yarn-error.log*
 next-env.d.ts
 public/EMC Safeguarding Policy 2024.zip
 public/GuestWifiAcceptableUsePolicy.zip
+.env*.local
