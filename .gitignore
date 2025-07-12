@@ -42,3 +42,5 @@ next-env.d.ts
 public/EMC Safeguarding Policy 2024.zip
 public/GuestWifiAcceptableUsePolicy.zip
 .env*.local
+logs/nginx/access.log
+logs/nginx/error.log
