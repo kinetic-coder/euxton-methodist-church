@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import Link from "next/link";
 
 interface LandingPageUIProps {
   ap?: string;
@@ -13,6 +14,8 @@ interface LandingPageUIProps {
 }
 
 export default function LandingPageUI({ ap, id, url, ssis, siteId, clientId }: LandingPageUIProps) {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [safeguardingAccepted, setSafeguardingAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -20,28 +23,132 @@ export default function LandingPageUI({ ap, id, url, ssis, siteId, clientId }: L
   const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
   const [hasOpenedSafeguarding, setHasOpenedSafeguarding] = useState(false);
   const [showConnectionDetails, setShowConnectionDetails] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
-  const handleAccept = () => {
-    if (termsAccepted && safeguardingAccepted) {
-      // TODO: Implement actual acceptance logic (e.g., redirect to main content)
-      console.log("Wifi Acceptable Use Policy and Safeguarding Policy accepted, and both have been opened!");
+  const handleAccept = async () => {
+    if (!fullName.trim() || !email.trim()) {
+      setSubmitError('Please provide your full name and email address.');
+      return;
+    }
+
+    if (!termsAccepted || !safeguardingAccepted) {
+      setSubmitError('Please accept both the Terms and Conditions and Safeguarding Policy.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError('');
+    setSubmitMessage('');
+
+    try {
+      const response = await fetch('/api/captive-portal/accept', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          email: email.trim(),
+          deviceDetails: {
+            macAddress: id,
+            apMacAddress: ap,
+            ssid: ssis,
+            originalUrl: url,
+            deviceName: `Device ${id ? id.substring(0, 8) : 'Unknown'}`,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSubmitMessage('Thank you! Your acceptance has been recorded. You should now have access to the internet.');
+        // Clear form
+        setFullName('');
+        setEmail('');
+        setTermsAccepted(false);
+        setSafeguardingAccepted(false);
+        setHasOpenedTerms(false);
+        setHasOpenedSafeguarding(false);
+      } else {
+        setSubmitError(data.message || 'Failed to record acceptance. Please try again.');
+      }
+    } catch {
+      setSubmitError('An error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Header with Login Link */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-800">
+              Euxton Methodist Church
+            </h1>
+            <Link
+              href="/login"
+              className="text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Login
+            </Link>
+          </div>
+        </div>
+      </header>
+
       <main className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
             Welcome to Euxton Methodist Church Wi-Fi
           </h1>
           <p className="text-xl text-gray-600 mb-8">
-            Before continuing, please read and accept our Wi-Fi Acceptable Use Policy and Safeguarding Policy.
+            Before continuing, please provide your details and accept our Wi-Fi Acceptable Use Policy and Safeguarding Policy.
           </p>
-
         </div>
 
         <div className="space-y-8">
+          {/* User Information Section */}
+          <div className="bg-gray-50 p-6 rounded-lg shadow-md">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+              Your Information
+            </h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  id="fullName"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your full name"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your email address"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Terms and Conditions Section */}
           <div className="bg-gray-50 p-6 rounded-lg shadow-md">
             <div className="flex justify-between items-center mb-4">
@@ -158,18 +265,30 @@ export default function LandingPageUI({ ap, id, url, ssis, siteId, clientId }: L
             </div>
           </div>
 
+          {/* Submit Messages */}
+          {submitError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              {submitError}
+            </div>
+          )}
+          {submitMessage && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+              {submitMessage}
+            </div>
+          )}
+
           {/* Accept Button */}
           <div className="flex justify-center">
             <button
               onClick={handleAccept}
-              disabled={!(termsAccepted && safeguardingAccepted && hasOpenedTerms && hasOpenedSafeguarding)}
+              disabled={isSubmitting || !fullName.trim() || !email.trim() || !termsAccepted || !safeguardingAccepted}
               className={`inline-flex items-center px-6 py-3 rounded-lg transition-colors ${
-                termsAccepted && safeguardingAccepted
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                isSubmitting || !fullName.trim() || !email.trim() || !termsAccepted || !safeguardingAccepted
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
               }`}
             >
-              {termsAccepted && safeguardingAccepted ? "Accept and Continue" : "Please accept both documents"}
+              {isSubmitting ? "Processing..." : "Accept and Continue"}
             </button>
           </div>
         </div>

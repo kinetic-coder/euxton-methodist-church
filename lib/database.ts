@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise';
+import crypto from 'crypto';
 
 // Database configuration
 const dbConfig = {
@@ -21,7 +22,7 @@ let pool: mysql.Pool | null = null;
 export async function getConnection(): Promise<mysql.Pool> {
   if (!pool) {
     pool = mysql.createPool(dbConfig);
-    
+
     // Test the connection
     try {
       const connection = await pool.getConnection();
@@ -35,14 +36,53 @@ export async function getConnection(): Promise<mysql.Pool> {
   return pool;
 }
 
-// User-related database operations
+// Password hashing utilities
+export function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+export function verifyPassword(password: string, hash: string): boolean {
+  return hashPassword(password) === hash;
+}
+
+// Tenant-related database operations
+export interface Tenant {
+  id?: number;
+  organisation_name: string;
+  created_at?: Date;
+  updated_at?: Date;
+  is_active?: boolean;
+}
+
+export async function createTenant(tenant: Tenant): Promise<number> {
+  const pool = await getConnection();
+  const [result] = await pool.execute(
+    'INSERT INTO Tenant (organisation_name) VALUES (?)',
+    [tenant.organisation_name]
+  );
+  return (result as mysql.ResultSetHeader).insertId;
+}
+
+export async function getTenantById(id: number): Promise<Tenant | null> {
+  const pool = await getConnection();
+  const [rows] = await pool.execute(
+    'SELECT * FROM Tenant WHERE id = ? AND is_active = TRUE',
+    [id]
+  );
+  const tenants = rows as Tenant[];
+  return tenants.length > 0 ? tenants[0] : null;
+}
+
+// User-related database operations (updated for login system)
 export interface User {
   id?: number;
-  mac_address: string;
+  tenant_id?: number;
+  full_name: string;
+  email: string;
+  password_hash: string;
+  mac_address?: string;
   ip_address?: string;
   device_name?: string;
-  email?: string;
-  name?: string;
   terms_accepted: boolean;
   safeguarding_accepted: boolean;
   created_at?: Date;
@@ -54,10 +94,30 @@ export interface User {
 export async function createUser(user: User): Promise<number> {
   const pool = await getConnection();
   const [result] = await pool.execute(
-    'INSERT INTO users (mac_address, ip_address, device_name, email, name, terms_accepted, safeguarding_accepted) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [user.mac_address, user.ip_address, user.device_name, user.email, user.name, user.terms_accepted, user.safeguarding_accepted]
+    'INSERT INTO users (tenant_id, full_name, email, password_hash, mac_address, ip_address, device_name, terms_accepted, safeguarding_accepted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [user.tenant_id, user.full_name, user.email, user.password_hash, user.mac_address, user.ip_address, user.device_name, user.terms_accepted, user.safeguarding_accepted]
   );
   return (result as mysql.ResultSetHeader).insertId;
+}
+
+export async function getUserById(id: number): Promise<User | null> {
+  const pool = await getConnection();
+  const [rows] = await pool.execute(
+    'SELECT * FROM users WHERE id = ? AND is_active = TRUE',
+    [id]
+  );
+  const users = rows as User[];
+  return users.length > 0 ? users[0] : null;
+}
+
+export async function getUserByEmail(email: string): Promise<User | null> {
+  const pool = await getConnection();
+  const [rows] = await pool.execute(
+    'SELECT * FROM users WHERE email = ? AND is_active = TRUE',
+    [email]
+  );
+  const users = rows as User[];
+  return users.length > 0 ? users[0] : null;
 }
 
 export async function getUserByMacAddress(macAddress: string): Promise<User | null> {
@@ -84,6 +144,57 @@ export async function updateUserAcceptance(userId: number, termsAccepted: boolea
     'UPDATE users SET terms_accepted = ?, safeguarding_accepted = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
     [termsAccepted, safeguardingAccepted, userId]
   );
+}
+
+// Registration function
+export async function registerUser(organisationName: string, fullName: string, email: string, password: string): Promise<{ tenantId: number; userId: number }> {
+  const pool = await getConnection();
+
+  // Start transaction
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    // Create tenant
+    const [tenantResult] = await connection.execute(
+      'INSERT INTO Tenant (organisation_name) VALUES (?)',
+      [organisationName]
+    );
+    const tenantId = (tenantResult as mysql.ResultSetHeader).insertId;
+
+    // Create user
+    const passwordHash = hashPassword(password);
+    const [userResult] = await connection.execute(
+      'INSERT INTO users (tenant_id, full_name, email, password_hash, terms_accepted, safeguarding_accepted) VALUES (?, ?, ?, ?, FALSE, FALSE)',
+      [tenantId, fullName, email, passwordHash]
+    );
+    const userId = (userResult as mysql.ResultSetHeader).insertId;
+
+    // Commit transaction
+    await connection.commit();
+    connection.release();
+
+    return { tenantId, userId };
+  } catch (error) {
+    // Rollback on error
+    await connection.rollback();
+    connection.release();
+    throw error;
+  }
+}
+
+// Login function
+export async function loginUser(email: string, password: string): Promise<User | null> {
+  const user = await getUserByEmail(email);
+  if (!user) {
+    return null;
+  }
+
+  if (verifyPassword(password, user.password_hash)) {
+    return user;
+  }
+
+  return null;
 }
 
 // Session-related database operations
@@ -168,6 +279,107 @@ export async function updateSetting(key: string, value: string): Promise<void> {
     'UPDATE settings SET setting_value = ?, updated_at = CURRENT_TIMESTAMP WHERE setting_key = ?',
     [value, key]
   );
+}
+
+// UserAcceptance operations for captive portal
+export interface UserAcceptance {
+  id?: number;
+  full_name: string;
+  email: string;
+  terms_accepted: boolean;
+  safeguarding_accepted: boolean;
+  accepted_at?: Date;
+  ip_address?: string;
+  user_agent?: string;
+}
+
+export async function createUserAcceptance(acceptance: UserAcceptance): Promise<number> {
+  const pool = await getConnection();
+  const [result] = await pool.execute(
+    'INSERT INTO UserAcceptance (full_name, email, terms_accepted, safeguarding_accepted, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)',
+    [acceptance.full_name, acceptance.email, acceptance.terms_accepted, acceptance.safeguarding_accepted, acceptance.ip_address, acceptance.user_agent]
+  );
+  return (result as mysql.ResultSetHeader).insertId;
+}
+
+// DeviceDetails operations for captive portal
+export interface DeviceDetails {
+  id?: number;
+  user_acceptance_id?: number;
+  mac_address?: string;
+  ap_mac_address?: string;
+  ssid?: string;
+  original_url?: string;
+  device_name?: string;
+  ip_address?: string;
+  user_agent?: string;
+  created_at?: Date;
+}
+
+export async function createDeviceDetails(device: DeviceDetails): Promise<number> {
+  const pool = await getConnection();
+  const [result] = await pool.execute(
+    'INSERT INTO DeviceDetails (user_acceptance_id, mac_address, ap_mac_address, ssid, original_url, device_name, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [device.user_acceptance_id, device.mac_address, device.ap_mac_address, device.ssid, device.original_url, device.device_name, device.ip_address, device.user_agent]
+  );
+  return (result as mysql.ResultSetHeader).insertId;
+}
+
+// Captive portal acceptance function
+export async function logCaptivePortalAcceptance(
+  fullName: string,
+  email: string,
+  ipAddress: string,
+  userAgent: string,
+  deviceDetails: {
+    macAddress?: string;
+    apMacAddress?: string;
+    ssid?: string;
+    originalUrl?: string;
+    deviceName?: string;
+  }
+): Promise<{ userAcceptanceId: number; deviceDetailsId: number }> {
+  const pool = await getConnection();
+
+  // Start transaction
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    // Create user acceptance record
+    const [acceptanceResult] = await connection.execute(
+      'INSERT INTO UserAcceptance (full_name, email, terms_accepted, safeguarding_accepted, ip_address, user_agent) VALUES (?, ?, TRUE, TRUE, ?, ?)',
+      [fullName, email, ipAddress, userAgent]
+    );
+    const userAcceptanceId = (acceptanceResult as mysql.ResultSetHeader).insertId;
+
+    // Create device details record - convert undefined to null
+    const [deviceResult] = await connection.execute(
+      'INSERT INTO DeviceDetails (user_acceptance_id, mac_address, ap_mac_address, ssid, original_url, device_name, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        userAcceptanceId,
+        deviceDetails.macAddress || null,
+        deviceDetails.apMacAddress || null,
+        deviceDetails.ssid || null,
+        deviceDetails.originalUrl || null,
+        deviceDetails.deviceName || null,
+        ipAddress,
+        userAgent
+      ]
+    );
+    const deviceDetailsId = (deviceResult as mysql.ResultSetHeader).insertId;
+
+    // Commit transaction
+    await connection.commit();
+    connection.release();
+
+    return { userAcceptanceId, deviceDetailsId };
+  } catch (error) {
+    // Rollback on error
+    await connection.rollback();
+    connection.release();
+    throw error;
+  }
 }
 
 // Close the connection pool
